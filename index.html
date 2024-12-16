@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Knowledge Quiz</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background: #111010; /* Solid background color */
+            color: #e5e7eb;
+            text-align: left; /* Align content to the left */
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            padding: 30px;
+            background: #000000;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(7, 1, 1, 0.3);
+        }
+        h1 {
+            font-size: 2rem;
+            color: #b73315;
+        }
+        .question {
+            font-size: 1.2rem;
+            margin: 15px 0;
+        }
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .option {
+            padding: 15px;
+            background: #c34716;
+            color: #e5e7eb;
+            border: 2px solid #d02b12;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1 1 calc(50% - 20px);
+            text-align: center;
+            transition: background 0.3s, color 0.3s;
+        }
+        .option:hover {
+            background: #be1707;
+            color: #ce3607;
+        }
+        .feedback {
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+        .score {
+            font-size: 1.2rem;
+        }
+        .timer {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        .start-btn {
+            display: block;
+            padding: 10px 15px;
+            font-size: 1rem;
+            margin: 10px auto;
+            background: #bd2b06;
+            color: #581818;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .start-btn:hover {
+            transform: scale(1.05);
+            background: #bfb905;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Python Knowledge Quiz</h1>
+        <button class="start-btn" id="startBtn">Take the Quiz</button>
+        <div class="quiz hidden">
+            <div class="timer">Remaining Time: 10s</div>
+            <div class="question">Loading...</div>
+            <div class="options"></div>
+            <div class="feedback hidden"></div>
+            <div class="score">Score: 0</div>
+        </div>
+    </div>
+    <script>
+        let score = 0;
+        let timeLeft = 10;
+        let timerInterval;
+        let currentQuestionIndex = 0;
+        let shuffledQuestions = [];
+
+        const startBtn = document.getElementById("startBtn");
+        const quizElement = document.querySelector(".quiz");
+        const questionElement = document.querySelector(".question");
+        const optionsElement = document.querySelector(".options");
+        const feedbackElement = document.querySelector(".feedback");
+        const scoreElement = document.querySelector(".score");
+        const timerElement = document.querySelector(".timer");
+
+        async function fetchQuestions() {
+            const response = await fetch("/get-questions");
+            const data = await response.json();
+            shuffledQuestions = data;
+        }
+
+        async function startQuiz() {
+            score = 0;
+            currentQuestionIndex = 0;
+            await fetchQuestions();
+            startBtn.classList.add("hidden");
+            quizElement.classList.remove("hidden");
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= shuffledQuestions.length) {
+                return endQuiz();
+            }
+
+            timeLeft = 10;
+            timerElement.textContent = `Time Left: ${timeLeft}s`;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+
+            const currentQuestion = shuffledQuestions[currentQuestionIndex];
+            questionElement.textContent = currentQuestion.question;
+            optionsElement.innerHTML = "";
+
+            currentQuestion.options.forEach((option, index) => {
+                const button = document.createElement("button");
+                button.textContent = option;
+                button.classList.add("option");
+                button.onclick = () => handleAnswer(index);
+                optionsElement.appendChild(button);
+            });
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerElement.textContent = `Time Left: ${timeLeft}s`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                feedbackElement.textContent = "⏳ Time's Up! Moving to next question.";
+                feedbackElement.style.color = "#ffc107";
+                feedbackElement.classList.remove("hidden");
+
+                setTimeout(() => {
+                    feedbackElement.classList.add("hidden");
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }, 2000);
+            }
+        }
+
+        function handleAnswer(selectedIndex) {
+            clearInterval(timerInterval);
+            const currentQuestion = shuffledQuestions[currentQuestionIndex];
+            if (selectedIndex === currentQuestion.correct) {
+                feedbackElement.textContent = "🎉 Correct Answer! 🎉";
+                feedbackElement.style.color = "#4caf50";
+                score++;
+            } else {
+                feedbackElement.textContent = "❌ Wrong Answer ❌";
+                feedbackElement.style.color = "#f44336";
+            }
+
+            feedbackElement.classList.remove("hidden");
+            scoreElement.textContent = `Score: ${score}`;
+
+            setTimeout(() => {
+                feedbackElement.classList.add("hidden");
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 2000);
+        }
+
+        function endQuiz() {
+            clearInterval(timerInterval);
+            questionElement.textContent = "Quiz Over!";
+            optionsElement.innerHTML = "";
+            feedbackElement.textContent = `Your final score is ${score}/${shuffledQuestions.length}`;
+            feedbackElement.style.color = "#fff";
+            feedbackElement.classList.remove("hidden");
+            startBtn.textContent = "Restart Quiz";
+            startBtn.classList.remove("hidden");
+        }
+
+        startBtn.addEventListener("click", startQuiz);
+    </script>
+</body>
+</html>
